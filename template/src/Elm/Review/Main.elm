@@ -63,6 +63,9 @@ port fixConfirmationStatus : Bool -> Cmd msg
 port abort : String -> Cmd msg
 
 
+port stopApplication : (() -> msg) -> Sub msg
+
+
 
 -- PROGRAM
 
@@ -71,12 +74,12 @@ type alias Flags =
     Encode.Value
 
 
-main : Program Flags Model Msg
+main : Program Flags (Maybe Model) Msg
 main =
     Platform.worker
         { init = init
-        , update = update
-        , subscriptions = \_ -> subscriptions
+        , update = rootUpdate
+        , subscriptions = subscriptions
         }
 
 
@@ -112,7 +115,7 @@ type FixMode
     | FixAll
 
 
-init : Flags -> ( Model, Cmd msg )
+init : Flags -> ( Maybe Model, Cmd msg )
 init flags =
     let
         ( fixMode, cmd ) =
@@ -123,15 +126,16 @@ init flags =
                 Err _ ->
                     ( DontFix, abort <| "Problem decoding the flags when running the elm-review runner" )
     in
-    ( { rules = config
-      , project = Project.new
-      , fixAllResultProject = Project.new
-      , fixMode = fixMode
-      , reviewErrors = []
-      , refusedErrorFixes = RefusedErrorFixes.empty
-      , errorAwaitingConfirmation = NotAwaiting
-      , fixAllErrors = Dict.empty
-      }
+    ( Just
+        { rules = config
+        , project = Project.new
+        , fixAllResultProject = Project.new
+        , fixMode = fixMode
+        , reviewErrors = []
+        , refusedErrorFixes = RefusedErrorFixes.empty
+        , errorAwaitingConfirmation = NotAwaiting
+        , fixAllErrors = Dict.empty
+        }
     , cmd
     )
 
@@ -169,10 +173,27 @@ type Msg
     | GotRequestToReview
     | UserConfirmedFix Decode.Value
     | RequestedToKnowIfAFixConfirmationIsExpected
+    | GotRequestToStopApplication
 
 
 type alias Source =
     String
+
+
+rootUpdate : Msg -> Maybe Model -> ( Maybe Model, Cmd Msg )
+rootUpdate msg maybeModel =
+    case maybeModel of
+        Nothing ->
+            ( Nothing, Cmd.none )
+
+        Just model ->
+            case msg of
+                GotRequestToStopApplication ->
+                    ( Nothing, Cmd.none )
+
+                _ ->
+                    update msg model
+                        |> Tuple.mapFirst Just
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -347,6 +368,9 @@ update msg model =
 
         RequestedToKnowIfAFixConfirmationIsExpected ->
             ( model, fixConfirmationStatus (model.errorAwaitingConfirmation /= NotAwaiting) )
+
+        GotRequestToStopApplication ->
+            ( model, Cmd.none )
 
 
 cacheFileRequest : Project -> String -> Encode.Value
@@ -835,15 +859,21 @@ encodeReportPart { str, color, backgroundColor } =
 -- REVIEWING
 
 
-subscriptions : Sub Msg
-subscriptions =
-    Sub.batch
-        [ collectFile ReceivedFile
-        , removeFile RemovedFile
-        , collectElmJson ReceivedElmJson
-        , collectReadme ReceivedReadme
-        , collectDependencies ReceivedDependencies
-        , startReview (\_ -> GotRequestToReview)
-        , userConfirmedFix UserConfirmedFix
-        , askForFixConfirmationStatus (always RequestedToKnowIfAFixConfirmationIsExpected)
-        ]
+subscriptions : Maybe Model -> Sub Msg
+subscriptions maybeModel =
+    case maybeModel of
+        Just _ ->
+            Sub.batch
+                [ collectFile ReceivedFile
+                , removeFile RemovedFile
+                , collectElmJson ReceivedElmJson
+                , collectReadme ReceivedReadme
+                , collectDependencies ReceivedDependencies
+                , startReview (always GotRequestToReview)
+                , userConfirmedFix UserConfirmedFix
+                , askForFixConfirmationStatus (always RequestedToKnowIfAFixConfirmationIsExpected)
+                , stopApplication (always GotRequestToStopApplication)
+                ]
+
+        Nothing ->
+            Sub.none
