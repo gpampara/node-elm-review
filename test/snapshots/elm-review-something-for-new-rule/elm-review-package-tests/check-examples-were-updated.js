@@ -21,7 +21,7 @@ if (postCheckGitStatus !== '') {
   console.error('\u001B[31m✖\u001B[39m Your examples need to be updated.');
   console.log(
     `Please run ${Ansi.yellow(
-      'node maintenance/update-examples-from-preview.js'
+      'node maintenance/update-example-from-preview.js'
     )}`
   );
   process.exit(1);
