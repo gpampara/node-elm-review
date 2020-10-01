@@ -117,9 +117,11 @@ If the process ran without any hitches, you should get something like the follow
     (Proposal to be discussed: maybe the CLI can be spawned with this fix data and apply its own algorithm, to avoid you having to do all this work?)
     - `formatted`: An array of "chunks" that represent the full human-readable error that would be shown to the user. Chunks are described [below](#chunk).
 
-### One-line JSON
+### Newline delimited JSON
 
-Alternatively, you can use `--report=json-line` to print each review error on its own line. The report is a list of `"single-error"` (as described above) separated by new-lines, except that the `path` field was added.
+Alternatively, you can use `--report=ndson` to print each review error on its own line. The report is a list of `"single-error"` (as described above) delimited by a new line, except that the `path` field was added so that information does not become lost.
+
+This can be useful to send `elm-review` errors to logging/monitoring services.
 
 ```
 {"path":"src/Main.elm","rule":"NoUnused.Variables","message":"Imported variable `span` is not used","ruleLink":"https://package.elm-lang.org/packages/jfmengels/review-unused/2.1.3/NoUnused-Variables","details":["You should either use this value somewhere, or remove it at the location I pointed at."],"region":{"start":{"line":10,"column":11},"end":{"line":10,"column":15}},"fix":[{"range":{"start":{"line":8,"column":14},"end":{"line":10,"column":15}},"string":""}],"formatted":[{"string":"(fix) ","color":"#33BBC8"},{"string":"NoUnused.Variables","color":"#FF0000","href":"https://package.elm-lang.org/packages/jfmengels/review-unused/2.1.3/NoUnused-Variables"},": Imported variable `span` is not used\n\n 9|           -- span is unused\n10|         , span\n             ",{"string":"^^^^","color":"#FF0000"},"\n11|         , text\n\nYou should either use this value somewhere, or remove it at the location I pointed at."]}
