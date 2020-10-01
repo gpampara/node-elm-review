@@ -81,6 +81,10 @@ function createTestSuiteWithDifferentReportFormats {
         "$TITLE (JSON)" \
         "$ARGS --report=json" \
         "$FILE-json.txt"
+    $createTest "$LOCAL_COMMAND" \
+        "$TITLE (single line JSON)" \
+        "$ARGS --report=json-line" \
+        "$FILE-json-line.txt"
 }
 
 function initElmProject {
